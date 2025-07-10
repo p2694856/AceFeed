@@ -3,12 +3,12 @@ import express, { Request, Response } from 'express'
 import { getFeed } from './bluesky'
 import dotenv from 'dotenv'
 import cors from 'cors'
-app.use(cors())
+
 
 
 const app = express()
 const PORT = process.env.PORT || 3001
-
+app.use(cors())
 app.get('/api/feed', async (_req: Request, res: Response) => {
   try {
     const feed = await getFeed()
