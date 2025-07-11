@@ -17,10 +17,29 @@ async function ensureLogin(): Promise<void> {
  * Fetch the public Bluesky timeline.
  * We use AppBskyFeedGetTimeline.Response to type the result.
  */
-export async function getFeed(): Promise<
-  AppBskyFeedGetTimeline.Response["data"]["feed"]
-> {
+function extractPublisher(handle: string) {
+  // Simple rule-based mapping
+  if (handle.includes('bbc')) return 'BBC'
+  if (handle.includes('reuters')) return 'Reuters'
+  if (handle.includes('nytimes')) return 'New York Times'
+  return 'Unknown'
+}
+
+function inferCategory(text: string): string {
+  const lowered = text.toLowerCase()
+  if (lowered.includes('election') || lowered.includes('government')) return 'Politics'
+  if (lowered.includes('climate') || lowered.includes('environment')) return 'Climate'
+  if (lowered.includes('ai') || lowered.includes('tech')) return 'Tech'
+  return 'General'
+}
+
+export async function getFeed() {
   await ensureLogin()
   const res = await AGENT.app.bsky.feed.getTimeline({})
-  return res.data.feed
+  const annotated = res.data.feed.map(post => ({
+    ...post,
+    publisher: extractPublisher(post.author.handle),
+    category: inferCategory(post.record.text)
+  }))
+  return annotated
 }

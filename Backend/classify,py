@@ -1,0 +1,23 @@
+# classify.py
+import sys
+import json
+from transformers import pipeline
+
+# Initialize zero-shot classifier once
+classifier = pipeline(
+    "zero-shot-classification",
+    model="facebook/bart-large-mnli"
+)
+
+def main():
+    # Read JSON payload from stdin: { text: string, labels: string[] }
+    payload = json.load(sys.stdin)
+    text = payload["text"]
+    labels = payload["labels"]
+
+    # Run classification
+    result = classifier(text, candidate_labels=labels)
+    print(json.dumps(result))
+
+if __name__ == "__main__":
+    main()
