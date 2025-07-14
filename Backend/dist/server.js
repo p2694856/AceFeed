@@ -2,7 +2,7 @@
 import express from 'express';
 import { getFeed } from '../src/bluesky.ts';
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4000;
 app.get('/api/feed', async (_req, res) => {
     try {
         const feed = await getFeed();

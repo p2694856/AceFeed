@@ -1,18 +1,18 @@
-// src/server.ts
-import express from 'express';
-import { getFeed } from '../src/bluesky.ts';
-const app = express();
-const PORT = process.env.PORT || 3001;
-app.get('/api/feed', async (_req, res) => {
-    try {
-        const feed = await getFeed();
-        res.json(feed);
-    }
-    catch (err) {
-        console.error('Bluesky fetch error:', err);
-        res.status(500).json({ error: 'Unable to fetch feed' });
-    }
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+// Importing module
+const express_1 = __importDefault(require("express"));
+const app = (0, express_1.default)();
+const PORT = 3001;
+// Handling GET / Request
+app.get('/', (req, res) => {
+    res.send('Welcome to typescript backend!');
 });
+// Server setup
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log('The application is listening '
+        + 'on port http://localhost:' + PORT);
 });

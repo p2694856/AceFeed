@@ -1,55 +1,95 @@
-// src/app/page.tsx
-'use client'
-import { handleLike, logDuration } from './services/engagement'
-import { useViewTime } from './contents/useViewTime'
+import Image from "next/image";
+import styles from "./page.module.css";
 
-import { useEffect, useState } from 'react'
-import { fetchFeed, Post } from './services/bluesky'
-
-export default function HomePage() {
-  const [feed, setFeed] = useState<Post[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [summary, setSummary] = useState<string>("")
-
-  async function handleSummarize(text: string) {
-    const { labels, scores } = await classifyPost(text, [
-      "Politics",
-      "Technology",
-      "Climate",
-      "General",
-    ])
-    // Pick top label
-    const idx = scores.indexOf(Math.max(...scores))
-    setSummary(`Topic: ${labels[idx]} (${(scores[idx] * 100).toFixed(1)}%)`)
-  }
-    useEffect(() => {
-    fetchFeed()
-      .then(setFeed)
-      .catch(err => setError(err.message))
-  }, [])
-
-  if (error) return <p className="p-4 text-red-500">Error: {error}</p>
-
+export default function Home() {
   return (
-    <main className="container mx-auto p-4">
-      {feed.map(post => (
-        <article key={post.cid} className="bg-white p-4 rounded shadow mb-4">
-          <h2 className="font-bold">
-            {post.author.displayName || post.author.handle}
-          </h2>
-          <p className="mt-2">{post.record.text}</p>
-          <time className="text-gray-500 text-sm">
-            {new Date(post.record.createdAt).toLocaleString()}
-          </time>
-          <button
-            className="mt-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-            onClick={() => handleLike(post.uri, false, new Date(), "demo-user")}
-          >
-          ❤️ Like
-        </button>
+    <div className={styles.page}>
+      <main className={styles.main}>
+        <Image
+          className={styles.logo}
+          src="/next.svg"
+          alt="Next.js logo"
+          width={180}
+          height={38}
+          priority
+        />
+        <ol>
+          <li>
+            Get started by editing <code>src/app/page.tsx</code>.
+          </li>
+          <li>Save and see your changes instantly.</li>
+        </ol>
 
-        </article>
-      ))}
-    </main>
-  )
+        <div className={styles.ctas}>
+          <a
+            className={styles.primary}
+            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              className={styles.logo}
+              src="/vercel.svg"
+              alt="Vercel logomark"
+              width={20}
+              height={20}
+            />
+            Deploy now
+          </a>
+          <a
+            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.secondary}
+          >
+            Read our docs
+          </a>
+        </div>
+      </main>
+      <footer className={styles.footer}>
+        <a
+          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/file.svg"
+            alt="File icon"
+            width={16}
+            height={16}
+          />
+          Learn
+        </a>
+        <a
+          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/window.svg"
+            alt="Window icon"
+            width={16}
+            height={16}
+          />
+          Examples
+        </a>
+        <a
+          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/globe.svg"
+            alt="Globe icon"
+            width={16}
+            height={16}
+          />
+          Go to nextjs.org →
+        </a>
+      </footer>
+    </div>
+  );
 }
