@@ -14,7 +14,7 @@ type EnrichedPost = {
 };
 
 export default function Page() {
-
+ 
   const searchParams = useSearchParams();
   const initialStyle = searchParams.get('style') ?? '';
 
@@ -23,6 +23,7 @@ export default function Page() {
   const [posts, setPosts] = useState<EnrichedPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<'stacked' | 'gallery' | 'split'>('split');
 
   useEffect(() => {
     if (initialStyle) {
@@ -51,8 +52,21 @@ export default function Page() {
   }
 
   return (
-    <main className="max-w-xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Bluesky Feed Enricher</h1>
+    <main className="p-6 space-y-8">
+      <h1 className="text-2xl font-bold item-center">Bluesky Feed Enricher</h1>
+
+        <div className="flex gap-3 items-center">
+        <span className="font-semibold text-sm">Layout:</span>
+        {['stacked', 'gallery', 'split'].map((mode) => (
+          <button
+            key={mode}
+            onClick={() => setLayout(mode as any)}
+            className={`px-3 py-1 rounded border ${layout === mode ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
+          >
+            {mode}
+      </button>
+        ))}
+      </div>
 
       <div className="flex gap-2">
         <input
@@ -73,40 +87,31 @@ export default function Page() {
 
       {error && <p className="text-red-500">Error: {error}</p>}
 
-      <div className="mt-6 space-y-6">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {posts.map((item, i) => (
-          <div
-            key={i}
-            className="border rounded-lg p-4 space-y-3 shadow"
-          >
-            {/* Bluesky’s own attachments */}
+          <div key={i} className="bg-white p-4 rounded-lg shadow space-y-3">
+            {/* Attachments */}
             {item.postImages.map((url, idx) => (
               <img
                 key={idx}
                 src={url}
-                alt="Post attachment"
-                className="rounded w-full mb-2"
+                alt="Post"
+                className="rounded w-full"
               />
             ))}
-
-            {/* Generated or fallback image */}
             {!item.postImages.length && item.generatedImageUrl && (
               <img
                 src={item.generatedImageUrl}
                 alt={item.imagePrompt}
-                className="rounded w-full opacity-80 mb-2"
+                className="rounded w-full opacity-90"
               />
             )}
-
-            <p>
-              <strong>📝 Original:</strong> {item.text}
-            </p>
-            <p>
-              <strong>✨ Summary:</strong> {item.summary}
-            </p>
-            <p>
-              <strong>🖼️ Concept:</strong> {item.imagePrompt}
-            </p>
+            {item.imagePrompt && (
+              <p className="text-sm italic text-gray-500">🖼️ Concept: {item.imagePrompt}</p>
+            )}
+            {/* Captions */}
+            <p><strong>📝 Original:</strong> {item.text}</p>
+            <p><strong>✨ Summary:</strong> {item.summary}</p>
           </div>
         ))}
       </div>

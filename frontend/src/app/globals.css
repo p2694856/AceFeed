@@ -26,3 +26,26 @@ button {
     color: white;
     padding: 0.5rem 1rem;
 }
+
+.layout-wrapper {
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+@media (min-width: 768px) {
+  .layout-wrapper {
+    padding: 3rem 4rem;
+    align-items: stretch;
+  }
+}
+
+@media (min-width: 1024px) {
+  .layout-wrapper {
+    padding: 3rem 6rem;
+  }
+}
