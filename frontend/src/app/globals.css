@@ -49,3 +49,8 @@ button {
     padding: 3rem 6rem;
   }
 }
+
+.h1{
+  text-decoration: solid; 
+  font-weight: bold;
+}

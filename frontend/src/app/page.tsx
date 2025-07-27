@@ -1,9 +1,9 @@
 // src/app/page.tsx
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
+
 
 type EnrichedPost = {
   text: string;
@@ -23,14 +23,13 @@ export default function Page() {
   const [posts, setPosts] = useState<EnrichedPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [layout, setLayout] = useState<'stacked' | 'gallery' | 'split'>('split');
+  
 
   useEffect(() => {
     if (initialStyle) {
       fetchFeed(initialStyle);
     }
-    // only on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   // 4) Fetch helper
@@ -53,21 +52,9 @@ export default function Page() {
 
   return (
     <main className="p-6 space-y-8">
-      <h1 className="text-2xl font-bold item-center">Bluesky Feed Enricher</h1>
+      <h1 className="text-2xl font-bold">Bluesky Feed Enricher</h1>
 
-        <div className="flex gap-3 items-center">
-        <span className="font-semibold text-sm">Layout:</span>
-        {['stacked', 'gallery', 'split'].map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setLayout(mode as any)}
-            className={`px-3 py-1 rounded border ${layout === mode ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
-          >
-            {mode}
-      </button>
-        ))}
-      </div>
-
+       
       <div className="flex gap-2">
         <input
           type="text"

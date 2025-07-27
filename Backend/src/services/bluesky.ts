@@ -50,7 +50,7 @@ export async function fetchFollowedPosts(
   const url = new URL(`${API}/xrpc/app.bsky.feed.getTimeline`);
   url.searchParams.set('feed', 'following');
   url.searchParams.set('author', did);
-  url.searchParams.set('limit', '10');   // <- limit to 16 posts
+  url.searchParams.set('limit', '16');   // <- limit to 16 posts
 
   const res = await fetch(url.toString(), { 
     headers: { Authorization: `Bearer ${accessJwt}` },
