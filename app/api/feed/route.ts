@@ -29,7 +29,7 @@ async function generateCaption(title: string, content: string | null): Promise<s
       }],
     }),
   });
-
+   
   const data = await res.json();
   return data.choices?.[0]?.message?.content ?? null;
 }
