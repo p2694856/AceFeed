@@ -1,10 +1,10 @@
 // app/api/posts/generate/route.ts
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!;
+const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN!;
 
 async function fetchImage(keyword: string): Promise<string | null> {
   const res = await fetch(
@@ -35,19 +35,18 @@ async function generateCaption(title: string, content: string): Promise<string> 
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-export async function GET() {
-  // 1) Secure with an internal token
-  const hdrs = await headers();                     // ← await here
-  const token = hdrs.get("x-internal-token");       // now valid
+export async function GET(request: Request) {
+  // ✅ Secure with internal token from request headers
+  const token = request.headers.get("x-internal-token");
 
-  if (token !== process.env.INTERNAL_API_TOKEN) {
+  if (token !== INTERNAL_API_TOKEN) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 2) Fetch all topics
+  // Fetch all topics
   const topics = await prisma.topic.findMany();
 
-  // 3) Generate & store a post per topic
+  // Generate & store a post per topic
   const creations = topics.map((topic) => (async () => {
     const seedContent = `Insights and news about ${topic.name}.`;
     const content = await generateCaption(topic.name, seedContent);
