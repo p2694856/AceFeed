@@ -29,13 +29,7 @@ export default function Header() {
             <>
               {!isAdmin && (
                 <>
-                  <Link
-                    href="/posts/new"
-                    className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition"
-                  >
-                    New Post
-                  </Link>
-
+                  
                   <Link
                     href="/settings/topics"
                     className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition"

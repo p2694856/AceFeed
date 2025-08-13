@@ -25,12 +25,17 @@ model Post {
   published Boolean  @default(false)
   authorId  String?
   author    User?    @relation(fields: [authorId], references: [id])
+  imageUrl   String
+  topicId   String
+  topic     Topic   @relation(fields: [topicId], references: [id])
 }
 
 model Topic {
   id         String      @id @default(cuid())
   name       String      @unique
+
   userTopics UserTopic[]
+  posts      Post[]      // ← Add this line to complete the one-to-many
 }
 
 model UserTopic {
