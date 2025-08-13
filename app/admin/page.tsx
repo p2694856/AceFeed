@@ -1,6 +1,6 @@
 // app/admin/page.tsx
 import { getServerSession } from "next-auth/next";
-import { authOptions }      from "../api/auth/[...nextauth]/route";
+import { authOptions }      from "@/auth";
 import prisma                from "@/lib/prisma";
 import ClientUserList        from "./ClientUserList";
 
