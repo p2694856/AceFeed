@@ -22,3 +22,10 @@ export async function GET(request: Request) {
 }
 
 
+export async function POST() {
+  return NextResponse.json(
+    { error: "Manual post creation is disabled" },
+    { status: 403 }
+  );
+}
+
