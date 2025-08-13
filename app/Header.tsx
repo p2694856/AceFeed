@@ -28,12 +28,21 @@ export default function Header() {
           {session ? (
             <>
               {!isAdmin && (
-                <Link
-                  href="/posts/new"
-                  className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition"
-                >
-                  New Post
-                </Link>
+                <>
+                  <Link
+                    href="/posts/new"
+                    className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition"
+                  >
+                    New Post
+                  </Link>
+
+                  <Link
+                    href="/settings/topics"
+                    className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition"
+                  >
+                    Topics
+                  </Link>
+                </>
               )}
 
               <div className="flex items-center space-x-4">
