@@ -21,11 +21,5 @@ export async function GET(request: Request) {
   return NextResponse.json({ posts, totalPages });
 }
 
-// Note: we drop the `request` parameter altogether
-export async function POST() {
-  return NextResponse.json(
-    { error: "Manual post creation is disabled" },
-    { status: 403 }
-  );
-}
+
 
