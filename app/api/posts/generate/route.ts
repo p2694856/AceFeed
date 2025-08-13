@@ -36,12 +36,14 @@ async function generateCaption(title: string, content: string): Promise<string> 
 }
 
 export async function GET(request: Request) {
-  // ✅ Secure with internal token from request headers
   const token = request.headers.get("x-internal-token");
+  console.log("Received token:", token);
+  console.log("Expected token:", process.env.INTERNAL_API_TOKEN);
 
-  if (token !== INTERNAL_API_TOKEN) {
+  if (token !== process.env.INTERNAL_API_TOKEN) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
 
   // Fetch all topics
   const topics = await prisma.topic.findMany();
