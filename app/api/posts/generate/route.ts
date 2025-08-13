@@ -35,9 +35,9 @@ async function generateCaption(title: string, content: string): Promise<string> 
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   // 1) Protect with an internal token
-  const token = request.headers.get("x-internal-token");
+  const token = _request.headers.get("x-internal-token");
   if (token !== process.env.INTERNAL_API_TOKEN) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
