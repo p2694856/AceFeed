@@ -9,8 +9,10 @@ jobs:
   trigger-generator:
     runs-on: ubuntu-latest
     steps:
-      - name: Debug token
+      - name: Call generator endpoint
         run: |
-          echo "Token starts with: ${INTERNAL_API_TOKEN:0:8}"
+          curl -X GET "$GENERATOR_URL" \
+            -H "x-internal-token: $INTERNAL_API_TOKEN"
         env:
+          GENERATOR_URL: https://ace-feed.vercel.app/api/posts/generate
           INTERNAL_API_TOKEN: ${{ secrets.INTERNAL_API_TOKEN }}
