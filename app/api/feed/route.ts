@@ -6,12 +6,27 @@ import prisma from "@/lib/prisma";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!;
 
-// 🔍 Fetch Unsplash image
+// Fetch Unsplash image
 async function fetchImage(keyword: string): Promise<string | null> {
-  const res = await fetch(`https://api.unsplash.com/search/photos?query=${keyword}&client_id=${UNSPLASH_ACCESS_KEY}`);
-  const data = await res.json();
-  return data.results?.[0]?.urls?.regular ?? null;
+  const res = await fetch(
+    `https://api.unsplash.com/search/photos?query=${keyword}&client_id=${UNSPLASH_ACCESS_KEY}`
+  );
+
+  if (!res.ok) {
+    console.error("Unsplash fetch failed:", res.status);
+    return null;
+  }
+
+  const json = await res.json();
+  const image = json.results?.[0]?.urls?.regular ?? null;
+
+  if (!image) {
+    console.warn("No image found for keyword:", keyword);
+  }
+
+  return image;
 }
+
 
 // Generate caption via OpenRouter
 async function generateCaption(title: string, content: string | null): Promise<string | null> {
