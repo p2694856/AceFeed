@@ -1,8 +1,8 @@
 // app/api/posts/generate/route.ts
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
 
-// Reuse your existing helpers:
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!;
 
@@ -35,9 +35,11 @@ async function generateCaption(title: string, content: string): Promise<string> 
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-export async function GET(_request: Request) {
-  // 1) Protect with an internal token
-  const token = _request.headers.get("x-internal-token");
+export async function GET() {
+  // 1) Secure with an internal token
+  const hdrs = await headers();                     // ← await here
+  const token = hdrs.get("x-internal-token");       // now valid
+
   if (token !== process.env.INTERNAL_API_TOKEN) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -45,23 +47,22 @@ export async function GET(_request: Request) {
   // 2) Fetch all topics
   const topics = await prisma.topic.findMany();
 
-  // 3) For each topic, generate & store a post
-  const creations = topics.map(async (topic) => {
-    // a) Basic placeholder content (or pull from another source)
+  // 3) Generate & store a post per topic
+  const creations = topics.map((topic) => (async () => {
     const seedContent = `Insights and news about ${topic.name}.`;
-    const generated = await generateCaption(topic.name, seedContent);
+    const content = await generateCaption(topic.name, seedContent);
     const imageUrl = await fetchImage(topic.name);
 
     return prisma.post.create({
       data: {
-        title: topic.name,         // or derive from `generated`
-        content: generated,
+        title: topic.name,
+        content,
         topicId: topic.id,
         published: true,
-        imageUrl: imageUrl || "",  // make sure your schema allows empty string
+        imageUrl: imageUrl || "",
       },
     });
-  });
+  })());
 
   const posts = await Promise.all(creations);
   return NextResponse.json({ created: posts.length });
