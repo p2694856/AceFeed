@@ -21,10 +21,4 @@ export async function GET(request: Request) {
   return NextResponse.json({ posts, totalPages });
 }
 
-export async function POST(_request: Request) {
-  // Option A: Block all manual post creations
-  return NextResponse.json(
-    { error: "Manual post creation is disabled" },
-    { status: 403 }
-  );
-}
+
