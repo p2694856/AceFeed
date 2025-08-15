@@ -26,7 +26,7 @@ async function generateCaption(title: string, content: string): Promise<string> 
       messages: [
         {
           role: "user",
-          content: `Write a short, engaging social-media post titled "${title}".\nContent: ${content} and at the end exclaim that the post was AI generated, refrain from using more than 2 emoji`,
+          content: `Write a short, engaging social-media post titled "${title}".\nContent: ${content} and at the end exclaim that the post was AI generated, refrain from using more than 1 emoji and do not start with "**" or an emoji`,
         },
       ],
     }),

@@ -18,7 +18,7 @@ export default async function Home() {
     orderBy: {
       createdAt: "desc",
     },
-    take: 6,
+    take: 9,
     include: {
       author: {
         select: {
@@ -37,8 +37,14 @@ export default async function Home() {
           <Link key={post.id} href={`/posts/${post.id}`} className="group">
             <div className="border rounded-lg shadow-md bg-white p-6 hover:shadow-lg transition-shadow duration-300">
               <h2 className="text-2xl font-semibold text-gray-900 group-hover:underline mb-2">{post.title}</h2>
-              <p className="text-sm text-gray-500">by {post.author ? post.author.name : "Anonymous"}</p>
               <p className="text-xs text-gray-400 mb-4">
+                {!post.authorId && (
+                  <img
+                    src={post.imageUrl}
+                    alt={post.title}
+                    className="rounded w-full opacity-80 mb-2 w-80 h-80 object-cover mx-auto"
+                  />
+                )}
                 {new Date(post.createdAt).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "long",
