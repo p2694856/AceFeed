@@ -9,9 +9,7 @@ interface Post {
   title: string;
   content?: string;
   createdAt: string;
-  author?: {
-    name: string;
-  };
+  imageUrl: string;
 }
 
 // Disable static generation
@@ -64,7 +62,8 @@ function PostsList() {
                   <Link href={`/posts/${post.id}`} className="text-2xl font-semibold text-gray-900 hover:underline">
                     {post.title}
                   </Link>
-                  <p className="text-sm text-gray-500">by {post.author?.name || "Anonymous"}</p>
+                  <p className="text-gray-700 leading-relaxed line-clamp-2">{post.content || "No content available."}</p>
+                  <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t" />
                   <p className="text-xs text-gray-400">
                     {new Date(post.createdAt).toLocaleDateString("en-US", {
                       year: "numeric",
@@ -77,7 +76,7 @@ function PostsList() {
             </ul>
           )}
 
-          {/* Pagination Controls */}
+
           <div className="flex justify-center space-x-4 mt-8">
             {page > 1 && (
               <Link href={`/posts?page=${page - 1}`}>

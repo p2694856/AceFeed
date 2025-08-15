@@ -26,7 +26,7 @@ async function generateCaption(title: string, content: string): Promise<string> 
       messages: [
         {
           role: "user",
-          content: `Write a short, engaging social-media post titled "${title}".\nContent: ${content}`,
+          content: `Write a short, engaging social-media post titled "${title}".\nContent: ${content} and at the end exclaim that the post was AI generated, refrain from using more than 2 emoji`,
         },
       ],
     }),
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     const seedContent = `Insights and news about ${topic.name}.`;
     const content = await generateCaption(topic.name, seedContent);
     const imageUrl = await fetchImage(topic.name);
-
+    if (content != null){
     return prisma.post.create({
       data: {
         title: topic.name,
@@ -61,9 +61,11 @@ export async function GET(request: Request) {
         topicId: topic.id,
         published: true,
         imageUrl: imageUrl || "",
-      },
+    },
     });
-  })());
+  }else{
+    return
+  }})());
 
   const posts = await Promise.all(creations);
   return NextResponse.json({ created: posts.length });
