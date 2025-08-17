@@ -50,7 +50,7 @@ export default function RegisterPage() {
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="name" className="sr-only">
-                IG handle
+                IG handle   
               </label>
               <input
                 id="name"
