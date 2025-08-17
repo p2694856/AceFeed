@@ -37,9 +37,9 @@ async function fetchRandomImage(keyword: string): Promise<string | null> {
   return pick.urls?.regular ?? null;
 }
 
-/**
- * Generate a short, engaging caption via OpenRouter
- */
+
+ //Generate a short, engaging caption via OpenRouter
+
 async function generateCaption(title: string, content: string): Promise<string> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
