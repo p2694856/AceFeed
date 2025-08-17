@@ -32,7 +32,7 @@ async function fetchRandomImage(keyword: string): Promise<string | null> {
     return null;
   }
 
-  // Pick one of the returned images at random
+  //Pick one of the returned images at random
   const pick = results[Math.floor(Math.random() * results.length)];
   return pick.urls?.regular ?? null;
 }
