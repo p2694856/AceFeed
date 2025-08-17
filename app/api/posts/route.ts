@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const postsPerPage = 5;
   const offset = (page - 1) * postsPerPage;
 
-  // Fetch paginated posts
+  //Fetch paginated posts
   const posts = await prisma.post.findMany({
     skip: offset,   
     take: postsPerPage,
