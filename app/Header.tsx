@@ -117,7 +117,7 @@ export default function Header() {
                 >
                   Sign Out
                 </button>
-              )}
+              )}   
             </>
           ) : (
             <Link
