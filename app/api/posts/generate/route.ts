@@ -6,9 +6,7 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!;
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN!;
 
-/**
- * Fetch a random Unsplash image based on a keyword
- */
+
 async function fetchRandomImage(keyword: string): Promise<string | null> {
   const query = encodeURIComponent(keyword);
   const url = `https://api.unsplash.com/search/photos?query=${query}&client_id=${UNSPLASH_ACCESS_KEY}`;
@@ -23,9 +21,6 @@ async function fetchRandomImage(keyword: string): Promise<string | null> {
   return data.urls?.regular ?? null;
 }
 
-/**
- * Generate a short, engaging caption via OpenRouter
- */
 async function generateCaption(title: string, content: string): Promise<string> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",

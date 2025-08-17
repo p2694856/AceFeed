@@ -23,7 +23,7 @@ export default async function Post({
   });
   if (!post) notFound();
 
-  // 3. delete action (no auth check here – purely UI visibility)
+
   async function deletePost() {
     "use server";
 
