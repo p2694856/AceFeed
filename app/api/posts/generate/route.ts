@@ -8,7 +8,7 @@ const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN!;
 
 // Number of random images to pull per query
 const IMG_COUNT = 4;
-
+    
 /**
  * Fetch a batch of random Unsplash images based on a keyword,
  * then pick one URL at random.
