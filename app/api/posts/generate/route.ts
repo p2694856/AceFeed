@@ -6,14 +6,26 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!;
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN!;
 
-async function fetchImage(keyword: string): Promise<string | null> {
-  const res = await fetch(
-    `https://api.unsplash.com/search/photos?query=${keyword}&client_id=${UNSPLASH_ACCESS_KEY}`
-  );
-  const json = await res.json();
-  return json.results?.[0]?.urls?.regular ?? null;
+/**
+ * Fetch a random Unsplash image based on a keyword
+ */
+async function fetchRandomImage(keyword: string): Promise<string | null> {
+  const query = encodeURIComponent(keyword);
+  const url = `https://api.unsplash.com/photos/random?query=${query}&client_id=${UNSPLASH_ACCESS_KEY}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error("Unsplash random fetch failed:", res.status, await res.text());
+    return null;
+  }
+
+  const data = await res.json();
+  return data.urls?.regular ?? null;
 }
 
+/**
+ * Generate a short, engaging caption via OpenRouter
+ */
 async function generateCaption(title: string, content: string): Promise<string> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -31,41 +43,47 @@ async function generateCaption(title: string, content: string): Promise<string> 
       ],
     }),
   });
+
+  if (!res.ok) {
+    console.error("Caption generation failed:", res.status, await res.text());
+    return "";
+  }
+
   const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  return data.choices?.[0]?.message?.content?.trim() ?? "";
 }
 
 export async function GET(request: Request) {
+  // Internal auth
   const token = request.headers.get("x-internal-token");
-  console.log("Received token:", token);
-  console.log("Expected token:", process.env.INTERNAL_API_TOKEN);
-
-  if (token !== process.env.INTERNAL_API_TOKEN) {
+  if (token !== INTERNAL_API_TOKEN) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
 
   // Fetch all topics
   const topics = await prisma.topic.findMany();
 
-  // Generate & store a post per topic
-  const creations = topics.map((topic) => (async () => {
-    const seedContent = `Insights and news about ${topic.name}.`;
-    const content = await generateCaption(topic.name, seedContent);
-    const imageUrl = await fetchImage(topic.name);
-    if (content != null){
-    return prisma.post.create({
-      data: {
-        title: topic.name,
-        content,
-        topicId: topic.id,
-        published: true,
-        imageUrl: imageUrl || "",
-    },
-    });
-  }else{
-    return
-  }})());
+  // For each topic: generate caption, then fetch a random image using that caption
+  const creations = topics.map((topic) =>
+    (async () => {
+      const seedContent = `Insights and news about ${topic.name}.`;
+      const caption = await generateCaption(topic.name, seedContent);
+
+      // Use the caption (or fallback to the topic name) as our Unsplash query
+      const searchTerm = caption || topic.name;
+      const imageUrl = await fetchRandomImage(searchTerm);
+
+      return prisma.post.create({
+        data: {
+          title: topic.name,
+          content: caption,
+          topicId: topic.id,
+          published: true,
+          imageUrl: imageUrl || "",
+        },
+      });
+    })()
+  );
 
   const posts = await Promise.all(creations);
   return NextResponse.json({ created: posts.length });
