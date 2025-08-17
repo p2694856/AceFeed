@@ -11,7 +11,7 @@ const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN!;
  */
 async function fetchRandomImage(keyword: string): Promise<string | null> {
   const query = encodeURIComponent(keyword);
-  const url = `https://api.unsplash.com/search/photos?query=${query}&client_id=${UNSPLASH_ACCESS_KEY}`;
+  const url = `https://api.unsplash.com/photos/random?query=${query}&client_id=${UNSPLASH_ACCESS_KEY}`;
 
   const res = await fetch(url);
   if (!res.ok) {
@@ -38,7 +38,7 @@ async function generateCaption(title: string, content: string): Promise<string> 
       messages: [
         {
           role: "user",
-          content: `Write a short, engaging social-media post titled "${title}".\nContent: ${content} and at the end exclaim that the post was AI generated, refrain from using more than 1 emoji and do not start with "**" or an emoji`,
+          content: `Write a short, engaging social-media post titled ${title}.\nContent: ${content} and at the end exclaim that the post was AI generated, refrain from using more than 1 emoji and do not start with an emoji`,
         },
       ],
     }),
