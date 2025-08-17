@@ -6,21 +6,35 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY!;
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN!;
 
+// Number of random images to pull per query
+const IMG_COUNT = 4;
+
 /**
- * Fetch a random Unsplash image based on a keyword
+ * Fetch a batch of random Unsplash images based on a keyword,
+ * then pick one URL at random.
  */
 async function fetchRandomImage(keyword: string): Promise<string | null> {
-  const query = encodeURIComponent(keyword);
-  const url = `https://api.unsplash.com/photos/random?query=${query}&client_id=${UNSPLASH_ACCESS_KEY}`;
+  const encoded = encodeURIComponent(keyword);
+  const url = `https://api.unsplash.com/photos/random` +
+              `?query=${encoded}` +
+              `&count=${IMG_COUNT}` +
+              `&client_id=${UNSPLASH_ACCESS_KEY}`;
 
   const res = await fetch(url);
   if (!res.ok) {
-    console.error("Unsplash random fetch failed:", res.status, await res.text());
+    console.error("Unsplash batch fetch failed:", res.status, await res.text());
     return null;
   }
 
-  const data = await res.json();
-  return data.urls?.regular ?? null;
+  const results = await res.json();  // this will be an array
+  if (!Array.isArray(results) || results.length === 0) {
+    console.warn("No Unsplash results for query:", keyword);
+    return null;
+  }
+
+  // Pick one of the returned images at random
+  const pick = results[Math.floor(Math.random() * results.length)];
+  return pick.urls?.regular ?? null;
 }
 
 /**
@@ -38,7 +52,9 @@ async function generateCaption(title: string, content: string): Promise<string> 
       messages: [
         {
           role: "user",
-          content: `Write a short, engaging social-media post titled ${title}.\nContent: ${content} and at the end exclaim that the post was AI generated, refrain from using more than 1 emoji and do not start with an emoji`,
+          content: `Write a short, engaging social-media post titled "${title}".\n` +
+                   `Content: ${content} and at the end exclaim that the post was AI generated, ` +
+                   `refrain from using more than 1 emoji and do not start with an emoji`,
         },
       ],
     }),
@@ -69,7 +85,6 @@ export async function GET(request: Request) {
       const seedContent = `Insights and news about ${topic.name}.`;
       const caption = await generateCaption(topic.name, seedContent);
 
-      // Use the caption (or fallback to the topic name) as our Unsplash query
       const searchTerm = caption || topic.name;
       const imageUrl = await fetchRandomImage(searchTerm);
 
