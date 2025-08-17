@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
   // Fetch paginated posts
   const posts = await prisma.post.findMany({
-    skip: offset,
+    skip: offset,   
     take: postsPerPage,
     orderBy: { createdAt: "desc" },
     include: { author: { select: { name: true } } },
