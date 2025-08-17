@@ -13,8 +13,7 @@ export default async function Home() {
   // 1. Optional session (if present we’ll filter by followed topics)
   const session = await getServerSession(authOptions);
   const userEmail = session?.user?.email;
-
-  // 2. Redirect to setup if no Post table
+  
   const tableExists = await checkPostTableExists();
   if (!tableExists) redirect("/setup");
 
