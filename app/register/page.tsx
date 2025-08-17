@@ -1,10 +1,8 @@
 // app/register/page.tsx
 "use client";
-
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-
 export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);

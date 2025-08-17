@@ -1,6 +1,5 @@
 // app/posts/[id]/page.tsx
 export const dynamic = "force-dynamic";
-
 import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
@@ -32,7 +31,6 @@ export default async function Post({
     await prisma.post.delete({ where: { id: postId } });
     redirect("/posts");
   }
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8">
       <article className="max-w-3xl w-full bg-white shadow-lg rounded-lg p-8">
