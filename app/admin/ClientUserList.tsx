@@ -68,10 +68,19 @@ export default function ClientUserList({
       </ul>
       <button
         onClick={() => signOut({ callbackUrl: "/login" })}
-        className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition"
+        className="bg-black text-white mr-2 px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition "
         >
         Sign out
       </button>
+      {isAdmin && (
+        <button 
+          onClick={() => router.push("/admin/proxy-assignment")}
+          className="bg-black text-white m-auto px-4 py-2 rounded-lg hover:bg-gray-200 hover:text-black transition"
+        >
+          Manage Proxy Assignments
+        </button>
+      )}
+
 
     </main>
   );

@@ -1,0 +1,18 @@
+name: Publish IG Posts
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours, aligned with your generator
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger IG publish endpoint
+        run: |
+          curl -X POST "$PUBLISH_URL" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${{ secrets.INTERNAL_API_TOKEN }}"
+        env:
+          PUBLISH_URL: https://ace-feed.vercel.app/api/posts/publish
