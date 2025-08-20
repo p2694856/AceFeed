@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 export default function ProxyForm() {
   const [fbPageId, setFbPageId] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [igBusinessId, setIgBusinessId] = useState("");  // required
   const router = useRouter();
 
   async function addProxy(e: React.FormEvent) {
@@ -13,10 +14,11 @@ export default function ProxyForm() {
     await fetch("/api/admin/add-proxy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fbPageId, accessToken }),
+      body: JSON.stringify({ fbPageId, accessToken, igBusinessId }),
     });
     setFbPageId("");
     setAccessToken("");
+    setIgBusinessId("");
     router.refresh();
   }
 
@@ -24,7 +26,7 @@ export default function ProxyForm() {
     <form onSubmit={addProxy} className="mb-8 flex space-x-4">
       <input
         type="text"
-        placeholder="Enter FB Page ID"
+        placeholder="FB Page ID"
         value={fbPageId}
         onChange={(e) => setFbPageId(e.target.value)}
         className="border p-2 flex-1"
@@ -32,9 +34,17 @@ export default function ProxyForm() {
       />
       <input
         type="password"
-        placeholder="Access Token"
+        placeholder="Page Access Token"
         value={accessToken}
         onChange={(e) => setAccessToken(e.target.value)}
+        className="border p-2 flex-1"
+        required
+      />
+      <input
+        type="text"
+        placeholder="IG Business ID"
+        value={igBusinessId}
+        onChange={(e) => setIgBusinessId(e.target.value)}
         className="border p-2 flex-1"
         required
       />

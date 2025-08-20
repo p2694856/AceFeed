@@ -1,20 +1,24 @@
+// app/api/posts/publish/route.ts
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 const INTERNAL_TOKEN = process.env.INTERNAL_API_TOKEN!;
-const GRAPH_API = "https://graph.facebook.com/v17.0";
+const GRAPH_API       = "https://graph.facebook.com/v17.0";
 
 export async function POST(req: Request) {
-  // 1. Internal auth
+  // 1. Authenticate internal call
   const token = req.headers.get("x-internal-token");
   if (token !== INTERNAL_TOKEN) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden – invalid internal token" },
+      { status: 403 }
+    );
   }
 
-  // 2. Fetch posts from last 6 hours
-  const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  // 2. Fetch all unpublished posts
   const posts = await prisma.post.findMany({
-    where: { createdAt: { gte: cutoff } },
+    where:  { published: false },
     select: { id: true, content: true, imageUrl: true },
   });
 
@@ -22,73 +26,77 @@ export async function POST(req: Request) {
     return NextResponse.json({ results: [], message: "No new posts" });
   }
 
-  // 3. Fetch all proxy-page assignments
+  // 3. Load all proxy assignments
   const assignments = await prisma.proxyAssignment.findMany({
     include: { proxy: true },
   });
 
   const results: Array<{
-    postId: string;
-    pageId: string;
+    postId:  number;
+    pageId:  string;
     success: boolean;
-    error?: string;
-    igPostId?: string;
+    error?:  string;
   }> = [];
 
-  // 4. Loop each post × each page
+  // 4. Publish loop
   for (const post of posts) {
-    for (const a of assignments) {
+    for (const { proxy } of assignments) {
+      // Choose the IG business account or fallback to page ID
+      const pageId      = proxy.igBusinessId ?? proxy.fbPageId;
+      const accessToken = proxy.accessToken;
+
       try {
-        // 4a. Create media container
+        // a) Create media container
         const mediaRes = await fetch(
-          `${GRAPH_API}/${a.proxy.fbPageId}/media?access_token=${a.proxy.accessToken}`,
+          `${GRAPH_API}/${pageId}/media`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              image_url: post.imageUrl,
-              caption: post.content,
+            body: new URLSearchParams({
+              image_url:    post.imageUrl,
+              caption:      post.content || "",
+              access_token: accessToken,
             }),
           }
         );
         const mediaJson = await mediaRes.json();
-        if (mediaJson.error) {
-          throw new Error(mediaJson.error.message);
-        }
+        if (mediaJson.error) throw new Error(mediaJson.error.message);
 
-        // 4b. Publish container
+        // b) Publish that container
         const publishRes = await fetch(
-          `${GRAPH_API}/${a.proxy.fbPageId}/media_publish?creation_id=${mediaJson.id}&access_token=${a.proxy.accessToken}`,
-          { method: "POST" }
+          `${GRAPH_API}/${pageId}/media_publish`,
+          {
+            method: "POST",
+            body: new URLSearchParams({
+              creation_id:  String(mediaJson.id),
+              access_token: accessToken,
+            }),
+          }
         );
         const publishJson = await publishRes.json();
-        if (publishJson.error) {
-          throw new Error(publishJson.error.message);
-        }
+        if (publishJson.error) throw new Error(publishJson.error.message);
 
-        // Cast post.id and publishJson.id to string
+        // c) Mark post as published (no igPostId stored)
+        await prisma.post.update({
+          where: { id: post.id },
+          data:  { published: true },
+        });
+
         results.push({
-          postId: String(post.id),
-          pageId: String(a.proxy.fbPageId),
+          postId:  post.id,
+          pageId:  pageId,
           success: true,
-          igPostId: String(publishJson.id),
         });
       } catch (err: any) {
         results.push({
-          postId: String(post.id),
-          pageId: String(a.proxy.fbPageId),
+          postId:  post.id,
+          pageId:  pageId,
           success: false,
-          error: err.message,
+          error:   err.message,
         });
       }
     }
   }
 
-  // 5. Delete consumed posts
-  await prisma.post.deleteMany({
-    where: { id: { in: posts.map((p) => p.id) } },
-  });
-
-  // 6. Return summary for GitHub logs
+  // 5. Return summary
   return NextResponse.json({ results });
 }
