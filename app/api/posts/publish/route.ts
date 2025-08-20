@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     }
   }
 
-  // 5. Return summary
+  // Return summary
   const published = results.filter(r => r.success).map(r => r.postId);
   const failed    = results.filter(r => !r.success).map(r => ({
     postId: r.postId,
