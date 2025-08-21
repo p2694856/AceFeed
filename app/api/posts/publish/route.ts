@@ -7,127 +7,91 @@ const INTERNAL_TOKEN = process.env.INTERNAL_API_TOKEN!;
 const GRAPH_API       = "https://graph.facebook.com/v23.0";
 
 export async function POST(req: Request) {
-  // 1. Authenticate internal call
+  // 1. Authenticate
   const token = req.headers.get("x-internal-token");
   if (token !== INTERNAL_TOKEN) {
-    return NextResponse.json(
-      { error: "Forbidden – invalid internal token" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 2. Fetch all unpublished posts created in the last 30 minutes
-  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
-
-  const posts = await prisma.post.findMany({
-    where: {
-      published: false,
-      createdAt: {
-        gte: cutoff,
-      },
-    },
-    select: {
-      id: true,
-      content: true,
-      imageUrl: true,
-      createdAt: true,
-    },
+  // 2. Fetch posts WITHOUT any filters (debug)
+  const allUnpublished = await prisma.post.findMany({
+    where: { published: false },
+    select: { id: true, content: true, imageUrl: true, createdAt: true },
   });
 
-  if (posts.length === 0) {
+  console.log("DEBUG allUnpublished:", allUnpublished);
+
+  // 3. Fetch fresh posts (with cutoff)
+  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
+  const recentUnpublished = allUnpublished.filter(p => p.createdAt >= cutoff);
+
+  console.log("DEBUG recentUnpublished:", recentUnpublished);
+
+  // If still empty, short-circuit and return both for visibility
+  if (recentUnpublished.length === 0) {
     return NextResponse.json({
+      debug: {
+        allUnpublished,
+        recentUnpublished,
+        cutoff: cutoff.toISOString(),
+      },
       results: [],
       published: [],
       failed: [],
-      message: "No new posts to publish",
+      message: "No new posts to publish – see debug section",
       timestamp: new Date().toISOString(),
     });
   }
 
-  // 3. Load all proxy assignments
+  // 4. Fetch assignments
   const assignments = await prisma.proxyAssignment.findMany({
     include: { proxy: true },
   });
+  console.log("DEBUG assignments:", assignments);
 
-  const results: Array<{
-    postId: number;
-    pageId: string;
-    success: boolean;
-    error?: string;
-    content?: string;
-    imageUrl?: string;
-    createdAt?: string;
-  }> = [];
-
-  // 4. Publish loop
-  for (const post of posts) {
+  // 5. Proceed with your publish loop (unchanged)...
+  const results = [];
+  for (const post of recentUnpublished) {
     for (const { proxy } of assignments) {
-      const pageId      = proxy.igBusinessId ?? proxy.fbPageId;
-      const accessToken = proxy.accessToken;
-
-      if (!pageId || !accessToken) {
-        results.push({
-          postId: post.id,
-          pageId: pageId ?? "unknown",
-          success: false,
-          error: "Missing pageId or accessToken",
-          content: post.content ?? undefined,
-          imageUrl: post.imageUrl,
-        });
-        continue;
-      }
-
+      const pageId = proxy.igBusinessId ?? proxy.fbPageId;
+      const token  = proxy.accessToken;
       try {
-        // a) Create media container
-        const mediaRes = await fetch(`${GRAPH_API}/${pageId}/media`, {
-          method: "POST",
-          body: new URLSearchParams({
-            image_url:    post.imageUrl ?? "",
-            caption:      post.content ?? "",
-            access_token: accessToken,
-          }),
-        });
-        const mediaJson = await mediaRes.json();
+        const mediaJson = await (
+          await fetch(`${GRAPH_API}/${pageId}/media`, {
+            method: "POST",
+            body: new URLSearchParams({
+              image_url:    post.imageUrl,
+              caption:      post.content ?? "",
+              access_token: token,
+            }),
+          })
+        ).json();
         if (mediaJson.error) throw new Error(mediaJson.error.message);
 
-        // b) Publish that container
-        const publishRes = await fetch(`${GRAPH_API}/${pageId}/media_publish`, {
-          method: "POST",
-          body: new URLSearchParams({
-            creation_id:  String(mediaJson.id),
-            access_token: accessToken,
-          }),
-        });
-        const publishJson = await publishRes.json();
+        const publishJson = await (
+          await fetch(`${GRAPH_API}/${pageId}/media_publish`, {
+            method: "POST",
+            body: new URLSearchParams({
+              creation_id:  String(mediaJson.id),
+              access_token: token,
+            }),
+          })
+        ).json();
         if (publishJson.error) throw new Error(publishJson.error.message);
 
-        // c) Mark post as published
         await prisma.post.update({
           where: { id: post.id },
-          data:  { published: true },
+          data: { published: true },
         });
 
-        results.push({
-          postId:   post.id,
-          pageId,
-          success:  true,
-          content:  post.content ?? undefined,
-          imageUrl: post.imageUrl,
-        });
+        results.push({ postId: post.id, pageId, success: true });
       } catch (err: any) {
-        results.push({
-          postId:   post.id,
-          pageId,
-          success:  false,
-          error:    err.message,
-          content:  post.content ?? undefined,
-          imageUrl: post.imageUrl,
-        });
+        results.push({ postId: post.id, pageId, success: false, error: err.message });
       }
     }
   }
 
-  // 5. Return summary
+  // 6. Summarize and return
   const published = results.filter(r => r.success).map(r => r.postId);
   const failed    = results.filter(r => !r.success).map(r => ({
     postId: r.postId,
@@ -136,6 +100,11 @@ export async function POST(req: Request) {
   }));
 
   return NextResponse.json({
+    debug: {
+      seedCutoff: cutoff.toISOString(),
+      fetchedPosts: recentUnpublished.map(p => p.id),
+      assignmentPages: assignments.map(a => a.proxy.fbPageId),
+    },
     results,
     published,
     failed,
