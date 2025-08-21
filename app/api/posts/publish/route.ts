@@ -16,24 +16,23 @@ export async function POST(req: Request) {
     );
   }
 
-  // 2. Fetch all unpublished posts created in the last 10 minutes
-const cutoff = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+  // 2. Fetch all unpublished posts created in the last 30 minutes
+  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
 
-const posts = await prisma.post.findMany({
-  where: {
-    published: false,
-    createdAt: {
-      gte: cutoff,
+  const posts = await prisma.post.findMany({
+    where: {
+      published: false,
+      createdAt: {
+        gte: cutoff,
+      },
     },
-  },
-  select: {
-    id: true,
-    content: true,
-    imageUrl: true,
-    createdAt: true,
-  },
-});
-
+    select: {
+      id: true,
+      content: true,
+      imageUrl: true,
+      createdAt: true,
+    },
+  });
 
   if (posts.length === 0) {
     return NextResponse.json({
@@ -51,14 +50,14 @@ const posts = await prisma.post.findMany({
   });
 
   const results: Array<{
-  postId: number;
-  pageId: string;
-  success: boolean;
-  error?: string;
-  content?: string;
-  imageUrl?: string;
-  createdAt?: string;
-}> = [];
+    postId: number;
+    pageId: string;
+    success: boolean;
+    error?: string;
+    content?: string;
+    imageUrl?: string;
+    createdAt?: string;
+  }> = [];
 
   // 4. Publish loop
   for (const post of posts) {
@@ -66,13 +65,25 @@ const posts = await prisma.post.findMany({
       const pageId      = proxy.igBusinessId ?? proxy.fbPageId;
       const accessToken = proxy.accessToken;
 
+      if (!pageId || !accessToken) {
+        results.push({
+          postId: post.id,
+          pageId: pageId ?? "unknown",
+          success: false,
+          error: "Missing pageId or accessToken",
+          content: post.content ?? undefined,
+          imageUrl: post.imageUrl,
+        });
+        continue;
+      }
+
       try {
         // a) Create media container
         const mediaRes = await fetch(`${GRAPH_API}/${pageId}/media`, {
           method: "POST",
           body: new URLSearchParams({
-            image_url:    post.imageUrl,
-            caption:      post.content || "",
+            image_url:    post.imageUrl ?? "",
+            caption:      post.content ?? "",
             access_token: accessToken,
           }),
         });
