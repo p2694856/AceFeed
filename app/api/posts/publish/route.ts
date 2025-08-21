@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 const INTERNAL_TOKEN = process.env.INTERNAL_API_TOKEN!;
-const GRAPH_API       = "https://graph.facebook.com/v17.0";
+const GRAPH_API       = "https://graph.facebook.com/v23.0";
 
 export async function POST(req: Request) {
   // 1. Authenticate internal call
@@ -16,11 +16,24 @@ export async function POST(req: Request) {
     );
   }
 
-  // 2. Fetch all unpublished posts
-  const posts = await prisma.post.findMany({
-    where:  { published: false },
-    select: { id: true, content: true, imageUrl: true },
-  });
+  // 2. Fetch all unpublished posts created in the last 10 minutes
+const cutoff = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+
+const posts = await prisma.post.findMany({
+  where: {
+    published: false,
+    createdAt: {
+      gte: cutoff,
+    },
+  },
+  select: {
+    id: true,
+    content: true,
+    imageUrl: true,
+    createdAt: true,
+  },
+});
+
 
   if (posts.length === 0) {
     return NextResponse.json({
@@ -38,13 +51,14 @@ export async function POST(req: Request) {
   });
 
   const results: Array<{
-    postId:   number;
-    pageId:   string;
-    success:  boolean;
-    error?:   string;
-    content?: string;
-    imageUrl?: string;
-  }> = [];
+  postId: number;
+  pageId: string;
+  success: boolean;
+  error?: string;
+  content?: string;
+  imageUrl?: string;
+  createdAt?: string;
+}> = [];
 
   // 4. Publish loop
   for (const post of posts) {
