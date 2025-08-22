@@ -6,30 +6,20 @@ on:
   workflow_dispatch:      # allows manual trigger
 
 jobs:
-  generate_and_publish:
+  run_pipeline:
     runs-on: ubuntu-latest
     steps:
-      - name: Call generator and save response
-        id: call_api
+      - name: Trigger Post Generation
         run: |
+          echo "Calling generator endpoint..."
           curl -X GET "${{ secrets.GENERATOR_URL }}" \
-            -H "x-internal-token: ${{ secrets.INTERNAL_API_TOKEN }}" \
-            -o response.json # Save the output to a file named response.json
+            -H "x-internal-token: ${{ secrets.INTERNAL_API_TOKEN }}"
 
-      - name: Parse response and set outputs
-        id: parser # Give this step an ID to reference its outputs
-        run: |
-          # Use jq to parse the JSON and create outputs for other steps
-          # IMPORTANT: Make sure the keys '.imageUrl' and '.caption' exactly match your API's response
-          echo "imageUrl=$(jq -r .imageUrl response.json)" >> $GITHUB_OUTPUT
-          echo "caption=$(jq -r .caption response.json)" >> $GITHUB_OUTPUT
+      - name: Wait for database to commit
+        run: sleep 60 # Waits 60 seconds to ensure posts are saved before publishing
 
-      - name: Trigger Make Webhook
+      - name: Trigger Post Publishing
         run: |
-          curl -X POST \
-          -H "Content-Type: application/json" \
-          -d '{
-                "imageUrl": "${{ steps.parser.outputs.imageUrl }}",
-                "caption": "${{ steps.parser.outputs.caption }}"
-              }' \
-          "${{ secrets.MAKE_WEBHOOK_URL }}"
+          echo "Calling publish endpoint..."
+          curl -X POST "${{ secrets.PUBLISH_URL }}" \
+            -H "x-internal-token: ${{ secrets.INTERNAL_API_TOKEN }}"
