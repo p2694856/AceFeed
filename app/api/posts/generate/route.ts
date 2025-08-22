@@ -43,7 +43,8 @@ async function fetchRandomImage(keyword: string): Promise<string | null> {
 
 async function generateCaption(title: string, content: string): Promise<string> {
   const payload = {
-    model:    "deepseek/deepseek-chat-v3-0324:free",
+    // *** THE ONLY CHANGE IS ON THIS LINE ***
+    model:    "openai/gpt-4o", // Removed ":free" to use your credits
     messages: [
       {
         role:    "user",
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
   const topics = await prisma.topic.findMany();
   const createdPosts = [];
 
-  // *** CHANGE: Process topics one by one using a for...of loop ***
+  // Process topics one by one with a for...of loop
   for (const topic of topics) {
     console.log(`Generating post for topic: ${topic.name}...`);
     
@@ -97,8 +98,8 @@ export async function GET(request: Request) {
     
     createdPosts.push(post);
     
-    // Optional: Add a small delay between requests to be even safer
-    await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+    // Keeping a small delay is still good practice
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   console.log(`✅ Generated ${createdPosts.length} post(s). IDs:`, createdPosts.map(p => p.id));
