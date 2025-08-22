@@ -9,17 +9,20 @@ jobs:
   run_pipeline:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Call your API to create new posts in the database.
       - name: Trigger Post Generation
         run: |
-          echo "Calling generator endpoint..."
-          curl -X GET "${{ secrets.GENERATOR_URL }}" \
+          echo "Calling generator endpoint at ${{ secrets.GENERATOR_URL }}"
+          curl --fail -X GET "${{ secrets.GENERATOR_URL }}" \
             -H "x-internal-token: ${{ secrets.INTERNAL_API_TOKEN }}"
 
+      # Step 2: Wait 60 seconds. This gives your database time to save the new posts.
       - name: Wait for database to commit
-        run: sleep 60 # Waits 60 seconds to ensure posts are saved before publishing
+        run: sleep 60
 
+      # Step 3: Call your API to publish the posts that were just created.
       - name: Trigger Post Publishing
         run: |
-          echo "Calling publish endpoint..."
-          curl -X POST "${{ secrets.PUBLISH_URL }}" \
+          echo "Calling publish endpoint at ${{ secrets.PUBLISH_URL }}"
+          curl --fail -X POST "${{ secrets.PUBLISH_URL }}" \
             -H "x-internal-token: ${{ secrets.INTERNAL_API_TOKEN }}"
