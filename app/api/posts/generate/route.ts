@@ -43,8 +43,7 @@ async function fetchRandomImage(keyword: string): Promise<string | null> {
 
 async function generateCaption(title: string, content: string): Promise<string> {
   const payload = {
-    // *** THE ONLY CHANGE IS ON THIS LINE ***
-    model:    "openai/gpt-4o", // Removed ":free" to use your credits
+    model:    "openai/gpt-4o", // Using the best value model
     messages: [
       {
         role:    "user",
@@ -75,35 +74,30 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 2. Fetch all topics
+  // 2. Build one post per topic in parallel
   const topics = await prisma.topic.findMany();
-  const createdPosts = [];
+  const creations = topics.map((topic) =>
+    (async () => {
+      const seed    = `Insights and news about ${topic.name}.`;
+      const caption = await generateCaption(topic.name, seed);
+      const image   = await fetchRandomImage(caption || topic.name);
 
-  // Process topics one by one with a for...of loop
-  for (const topic of topics) {
-    console.log(`Generating post for topic: ${topic.name}...`);
-    
-    const seed = `Insights and news about ${topic.name}.`;
-    const caption = await generateCaption(topic.name, seed);
-    const image = await fetchRandomImage(caption || topic.name);
+      // Return the promise to create the post
+      return prisma.post.create({
+        data: {
+          title:     topic.name,
+          content:   caption,
+          topicId:   topic.id,
+          imageUrl:  image || "",
+        },
+      });
+    })()
+  );
 
-    const post = await prisma.post.create({
-      data: {
-        title: topic.name,
-        content: caption,
-        topicId: topic.id,
-        imageUrl: image || "",
-      },
-    });
-    
-    createdPosts.push(post);
-    
-    // Keeping a small delay is still good practice
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-
-  console.log(`✅ Generated ${createdPosts.length} post(s). IDs:`, createdPosts.map(p => p.id));
+  // 3. Persist all posts at once
+  const posts = await Promise.all(creations);
+  console.log(`✅ Generated ${posts.length} post(s). IDs:`, posts.map(p => p.id));
 
   // 4. Return count
-  return NextResponse.json({ created: createdPosts.length });
+  return NextResponse.json({ created: posts.length });
 }
