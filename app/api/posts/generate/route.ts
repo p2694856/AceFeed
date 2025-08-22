@@ -74,30 +74,35 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 2. Build one post per topic
+  // 2. Fetch all topics
   const topics = await prisma.topic.findMany();
-  const creations = topics.map((topic) =>
-    (async () => {
-      const seed    = `Insights and news about ${topic.name}.`;
-      const caption = await generateCaption(topic.name, seed);
-      const image   = await fetchRandomImage(caption || topic.name);
+  const createdPosts = [];
 
-      return prisma.post.create({
-        data: {
-          title:     topic.name,
-          content:   caption,
-          topicId:   topic.id,
-          // remove published: true so it stays false by default
-          imageUrl:  image || "",
-        },
-      });
-    })()
-  );
+  // *** CHANGE: Process topics one by one using a for...of loop ***
+  for (const topic of topics) {
+    console.log(`Generating post for topic: ${topic.name}...`);
+    
+    const seed = `Insights and news about ${topic.name}.`;
+    const caption = await generateCaption(topic.name, seed);
+    const image = await fetchRandomImage(caption || topic.name);
 
-  // 3. Persist them
-  const posts = await Promise.all(creations);
-  console.log(`✅ Generated ${posts.length} post(s). IDs:`, posts.map(p => p.id));
+    const post = await prisma.post.create({
+      data: {
+        title: topic.name,
+        content: caption,
+        topicId: topic.id,
+        imageUrl: image || "",
+      },
+    });
+    
+    createdPosts.push(post);
+    
+    // Optional: Add a small delay between requests to be even safer
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+  }
+
+  console.log(`✅ Generated ${createdPosts.length} post(s). IDs:`, createdPosts.map(p => p.id));
 
   // 4. Return count
-  return NextResponse.json({ created: posts.length });
+  return NextResponse.json({ created: createdPosts.length });
 }
