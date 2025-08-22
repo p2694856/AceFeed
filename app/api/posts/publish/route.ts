@@ -3,112 +3,87 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// Your secrets from .env
 const INTERNAL_TOKEN = process.env.INTERNAL_API_TOKEN!;
-const GRAPH_API       = "https://graph.facebook.com/v23.0";
+const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL!;
 
 export async function POST(req: Request) {
-  // 1. Authenticate
-  const token = req.headers.get("x-internal-token");
-  if (token !== INTERNAL_TOKEN) {
+  // 1. Authenticate the request from your GitHub Action
+  if (req.headers.get("x-internal-token") !== INTERNAL_TOKEN) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // 2. Fetch posts WITHOUT any filters (debug)
-  const allUnpublished = await prisma.post.findMany({
+  // 2. Find all recently created, unpublished posts
+  const recentUnpublished = await prisma.post.findMany({
     where: { published: false },
-    select: { id: true, content: true, imageUrl: true, createdAt: true },
   });
 
-  console.log("DEBUG allUnpublished:", allUnpublished);
-
-  // 3. Fetch fresh posts (with cutoff)
-  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
-  const recentUnpublished = allUnpublished.filter(p => p.createdAt >= cutoff);
-
-  console.log("DEBUG recentUnpublished:", recentUnpublished);
-
-  // If still empty, short-circuit and return both for visibility
   if (recentUnpublished.length === 0) {
-    return NextResponse.json({
-      debug: {
-        allUnpublished,
-        recentUnpublished,
-        cutoff: cutoff.toISOString(),
-      },
-      results: [],
-      published: [],
-      failed: [],
-      message: "No new posts to publish – see debug section",
-      timestamp: new Date().toISOString(),
-    });
+    return NextResponse.json({ message: "No new posts to publish." });
   }
 
-  // 4. Fetch assignments
-  const assignments = await prisma.proxyAssignment.findMany({
-    include: { proxy: true },
-  });
-  console.log("DEBUG assignments:", assignments);
+  const publishTasks = [];
 
-  // 5. Proceed with your publish loop (unchanged)...
-  const results = [];
+  // 3. For each post, find the right users and trigger the webhook
   for (const post of recentUnpublished) {
-    for (const { proxy } of assignments) {
-      const pageId = proxy.igBusinessId ?? proxy.fbPageId;
-      const token  = proxy.accessToken;
-      try {
-        const mediaJson = await (
-          await fetch(`${GRAPH_API}/${pageId}/media`, {
+    // Find all UserTopic entries for this post's topic
+    const subscriptions = await prisma.userTopic.findMany({
+      where: { topicId: post.topicId },
+      include: {
+        // Include the user and their proxy assignment details
+        user: {
+          include: {
+            proxyAssignments: {
+              include: {
+                proxy: true, // This gets the ProxyAccount with the tokens
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 4. For each subscription, create a task to call the Make.com webhook
+    for (const sub of subscriptions) {
+      // A user might have multiple proxy assignments, though usually it's one.
+      for (const assignment of sub.user.proxyAssignments) {
+        // This is the data we'll send to Make.com
+        const payload = {
+          imageUrl: post.imageUrl,
+          caption: post.content,
+          igBusinessId: assignment.proxy.igBusinessId,
+          accessToken: assignment.proxy.accessToken, // Pass the token directly
+        };
+
+        // Add the fetch call to our list of tasks to run
+        publishTasks.push(
+          fetch(MAKE_WEBHOOK_URL, {
             method: "POST",
-            body: new URLSearchParams({
-              image_url:    post.imageUrl,
-              caption:      post.content ?? "",
-              access_token: token,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
           })
-        ).json();
-        if (mediaJson.error) throw new Error(mediaJson.error.message);
-
-        const publishJson = await (
-          await fetch(`${GRAPH_API}/${pageId}/media_publish`, {
-            method: "POST",
-            body: new URLSearchParams({
-              creation_id:  String(mediaJson.id),
-              access_token: token,
-            }),
-          })
-        ).json();
-        if (publishJson.error) throw new Error(publishJson.error.message);
-
-        await prisma.post.update({
-          where: { id: post.id },
-          data: { published: true },
-        });
-
-        results.push({ postId: post.id, pageId, success: true });
-      } catch (err: any) {
-        results.push({ postId: post.id, pageId, success: false, error: err.message });
+        );
       }
     }
   }
+  
+  // 5. Run all the webhook triggers in parallel
+  await Promise.all(publishTasks);
 
-  // 6. Summarize and return
-  const published = results.filter(r => r.success).map(r => r.postId);
-  const failed    = results.filter(r => !r.success).map(r => ({
-    postId: r.postId,
-    pageId: r.pageId,
-    error:  r.error,
-  }));
+  // 6. Mark all the posts we've processed as "published"
+  await prisma.post.updateMany({
+    where: {
+      id: {
+        in: recentUnpublished.map((p) => p.id),
+      },
+    },
+    data: {
+      published: true,
+    },
+  });
 
   return NextResponse.json({
-    debug: {
-      seedCutoff: cutoff.toISOString(),
-      fetchedPosts: recentUnpublished.map(p => p.id),
-      assignmentPages: assignments.map(a => a.proxy.fbPageId),
-    },
-    results,
-    published,
-    failed,
-    message: `Published ${published.length} post(s), ${failed.length} failed`,
-    timestamp: new Date().toISOString(),
+    success: true,
+    message: `Processed ${recentUnpublished.length} posts.`,
   });
 }

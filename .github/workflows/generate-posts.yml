@@ -1,18 +1,35 @@
-name: Generate Posts
+name: Generate and Publish Posts
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  
-  workflow_dispatch:     # allows manual trigger
+    - cron: '0 */6 * * *'   # runs every 6 hours
+  workflow_dispatch:      # allows manual trigger
 
 jobs:
-  trigger-generator:
+  generate_and_publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Call generator endpoint
+      - name: Call generator and save response
+        id: call_api
         run: |
-          curl -X GET "$GENERATOR_URL" \
-            -H "x-internal-token: $INTERNAL_API_TOKEN"
-        env:
-          GENERATOR_URL: https://ace-feed.vercel.app/api/posts/generate
-          INTERNAL_API_TOKEN: ${{ secrets.INTERNAL_API_TOKEN }}
+          curl -X GET "${{ secrets.GENERATOR_URL }}" \
+            -H "x-internal-token: ${{ secrets.INTERNAL_API_TOKEN }}" \
+            -o response.json # Save the output to a file named response.json
+
+      - name: Parse response and set outputs
+        id: parser # Give this step an ID to reference its outputs
+        run: |
+          # Use jq to parse the JSON and create outputs for other steps
+          # IMPORTANT: Make sure the keys '.imageUrl' and '.caption' exactly match your API's response
+          echo "imageUrl=$(jq -r .imageUrl response.json)" >> $GITHUB_OUTPUT
+          echo "caption=$(jq -r .caption response.json)" >> $GITHUB_OUTPUT
+
+      - name: Trigger Make Webhook
+        run: |
+          curl -X POST \
+          -H "Content-Type: application/json" \
+          -d '{
+                "imageUrl": "${{ steps.parser.outputs.imageUrl }}",
+                "caption": "${{ steps.parser.outputs.caption }}"
+              }' \
+          "${{ secrets.MAKE_WEBHOOK_URL }}"
