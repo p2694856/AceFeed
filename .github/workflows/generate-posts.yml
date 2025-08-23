@@ -18,7 +18,7 @@ jobs:
 
       # Step 2: Wait 60 seconds. This gives your database time to save the new posts.
       - name: Wait for database to commit
-        run: sleep 180
+        run: sleep 180 
 
       # Step 3: Call your API to publish the posts that were just created.
       - name: Trigger Post Publishing
