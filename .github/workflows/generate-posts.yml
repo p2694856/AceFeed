@@ -8,7 +8,7 @@ on:
 jobs:
   run_pipeline:
     runs-on: ubuntu-latest
-    steps:
+    steps: 
       # Step 1: Call your API to create new posts in the database.
       - name: Trigger Post Generation
         run: |
