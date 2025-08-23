@@ -52,7 +52,7 @@ model ProxyAccount {
   id           Int      @id @default(autoincrement())
   fbPageId     String   @unique
   igBusinessId String?
-  accessToken  String
+  accessToken  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
