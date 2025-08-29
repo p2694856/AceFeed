@@ -6,9 +6,8 @@ import prisma from "@/lib/prisma";
 const OPENROUTER_API_KEY   = process.env.OPENROUTER_API_KEY!;
 const UNSPLASH_ACCESS_KEY  = process.env.UNSPLASH_ACCESS_KEY!;
 const INTERNAL_API_TOKEN   = process.env.INTERNAL_API_TOKEN!;
-const IMG_COUNT            = 4;
 const OPENROUTER_ENDPOINT  = "https://openrouter.ai/api/v1/chat/completions";
-const UNSPLASH_ENDPOINT    = "https://api.unsplash.com/photos/random";
+const UNSPLASH_ENDPOINT    = "https://api.unsplash.com/search/photos";
 
 async function safeJson<T = any>(res: Response, label: string): Promise<T | null> {
   const txt = await res.text();
@@ -23,27 +22,31 @@ async function safeJson<T = any>(res: Response, label: string): Promise<T | null
     return null;
   }
 }
-
-async function fetchRandomImage(keyword: string): Promise<string | null> {
+// Fetch images
+async function fetchFocusedImage(keyword: string): Promise<string | null> {
   const url =
     `${UNSPLASH_ENDPOINT}` +
     `?query=${encodeURIComponent(keyword)}` +
-    `&count=${IMG_COUNT}` +
+    `&per_page=1` + // We only need the single best result
     `&client_id=${UNSPLASH_ACCESS_KEY}`;
 
   const res  = await fetch(url);
-  const data = await safeJson<any[]>(res, "Unsplash");
-  if (!Array.isArray(data) || data.length === 0) {
+  // The search endpoint returns an object with a 'results' array
+  const data = await safeJson<{ results: any[] }>(res, "Unsplash");
+
+  if (!data || !Array.isArray(data.results) || data.results.length === 0) {
     console.warn("⚠️ No Unsplash hits for:", keyword);
     return null;
   }
-  const pick = data[Math.floor(Math.random() * data.length)];
-  return pick?.urls?.regular ?? null;
+  
+  // Return the URL of the first (most relevant) image
+  const firstImage = data.results[0];
+  return firstImage?.urls?.regular ?? null;
 }
 
 async function generateCaption(title: string, content: string): Promise<string> {
   const payload = {
-    model:    "openai/gpt-4o", // Using the best value model
+    model:    "openai/gpt-4o",
     messages: [
       {
         role:    "user",
@@ -76,26 +79,32 @@ export async function GET(request: Request) {
 
   // 2. Build one post per topic in parallel
   const topics = await prisma.topic.findMany();
-  const creations = topics.map((topic) =>
-    (async () => {
-      const seed    = `Insights and news about ${topic.name}.`;
-      const caption = await generateCaption(topic.name, seed);
-      const image   = await fetchRandomImage(caption || topic.name);
+  const creationPromises = topics.map(async (topic) => {
+    const seed = `Insights and news about ${topic.name}.`;
+    const caption = await generateCaption(topic.name, seed);
+    
+    // *** CHANGE 3: Use the new function with the more reliable topic name ***
+    const image = await fetchFocusedImage(topic.name);
 
-      // Return the promise to create the post
+    if (image && caption) {
       return prisma.post.create({
         data: {
-          title:     topic.name,
-          content:   caption,
-          topicId:   topic.id,
-          imageUrl:  image || "",
+          title: topic.name,
+          content: caption,
+          topicId: topic.id,
+          imageUrl: image,
         },
       });
-    })()
-  );
+    } else {
+      console.warn(`Skipping post for topic "${topic.name}" due to missing image or caption.`);
+      return null;
+    }
+  });
 
-  // 3. Persist all posts at once
-  const posts = await Promise.all(creations);
+  // 3. Persist all valid posts at once
+  const results = await Promise.all(creationPromises);
+  const posts = results.filter(post => post !== null); 
+
   console.log(`✅ Generated ${posts.length} post(s). IDs:`, posts.map(p => p.id));
 
   // 4. Return count
